@@ -39,10 +39,16 @@ import android.util.Size;
 import android.view.KeyEvent;
 import android.view.Surface;
 import android.view.WindowManager;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import org.tensorflow.demo.env.ImageUtils;
@@ -76,7 +82,7 @@ public abstract class CameraActivity extends Activity
 
   private Runnable postInferenceCallback;
   private Runnable imageConverter;
-    private Socket socket;
+  private Socket socket;
 
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -85,28 +91,6 @@ public abstract class CameraActivity extends Activity
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
     setContentView(R.layout.activity_camera);
-
-//    // 将服务器的retrofit初始化并存入全局
-//
-//    OkHttpClient client = new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS).readTimeout(60, TimeUnit.SECONDS).writeTimeout(60, TimeUnit.SECONDS).build();
-//
-//    Retrofit retrofitOfServer = new Retrofit.Builder()
-//            .baseUrl(Store.serverUrl)
-//            .client(client)
-//            .addConverterFactory(StringConverterFactory.create())
-//            .build();
-//    Store.setRetrofit(retrofitOfServer);
-
-
-//      // 初始化socket
-//      try {
-//          socket = new Socket(Store.ip, Store.port);
-//          Store.setSocket(socket);
-//      }
-//      catch (Exception e) {
-//          Toast.makeText( getApplicationContext(),"socket连接失败", Toast.LENGTH_LONG).show();
-//          e.printStackTrace();
-//      }
 
     if (hasPermission()) {
       setFragment();

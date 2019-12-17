@@ -61,6 +61,40 @@
                             android:textColor="#FFFFFF"
                             android:layout_gravity="bottom"/>
                   </LinearLayout>
+                  <LinearLayout
+                      android:layout_width="wrap_content"
+                      android:layout_height="match_parent"
+                      android:orientation="vertical"
+                      android:layout_gravity="right"
+                      android:layout_weight="1">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_gravity="right">
+                              <Button
+                                  android:id="@+id/interval_minus"
+                                  android:layout_width="40dp"
+                                  android:layout_height="48dp"
+                                  android:text="-"
+                                  android:textSize="20dp"/>
+
+                              <TextView
+                                  android:id="@+id/interval_text"
+                                  android:layout_width="wrap_content"
+                                  android:layout_height="wrap_content"
+                                  android:textSize="20dp"
+                                  android:textColor="#FFFFFF"
+                                  android:text="发送间隔:10帧"/>
+
+                              <Button
+                                  android:id="@+id/interval_plus"
+                                  android:layout_width="40dp"
+                                  android:layout_height="wrap_content"
+                                  android:text="+"
+                                  android:textSize="20dp"/>
+                        </LinearLayout>
+                  </LinearLayout>
             </LinearLayout>
             <LinearLayout
                 android:layout_width="match_parent"
@@ -84,6 +118,48 @@
                             android:text="当前切换方式：手动"
                             android:textColor="#FFFFFF"
                             android:layout_gravity="bottom"/>
+                  </LinearLayout>
+
+                  <LinearLayout
+                      android:layout_width="wrap_content"
+                      android:layout_height="match_parent"
+                      android:orientation="vertical"
+                      android:layout_gravity="right"
+                      android:layout_weight="1">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_gravity="right">
+                              <Button
+                                  android:id="@+id/quality_minus"
+                                  android:layout_width="40dp"
+                                  android:layout_height="48dp"
+                                  android:text="-"
+                                  android:textSize="20dp"/>
+
+                              <TextView
+                                  android:id="@+id/quality_text"
+                                  android:layout_width="wrap_content"
+                                  android:layout_height="wrap_content"
+                                  android:textSize="20dp"
+                                  android:textColor="#FFFFFF"
+                                  android:text="图片质量:100"/>
+
+                              <Button
+                                  android:id="@+id/quality_plus"
+                                  android:layout_width="40dp"
+                                  android:layout_height="wrap_content"
+                                  android:text="+"
+                                  android:textSize="20dp"/>
+                        </LinearLayout>
+                        <TextView
+                            android:id="@+id/network_delay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="延迟:0ms"
+                            android:textColor="#FFFFFF"
+                            android:layout_gravity="right" />
                   </LinearLayout>
             </LinearLayout>
 

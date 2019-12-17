@@ -11,7 +11,7 @@ public class Store {
 //    public static final String serverUrl = "http://172.18.2.18:8000/";
     public static final String serverUrl = "http://172.18.2.13:8000/";
 
-    public static final String ip = "172.18.13.147";
+    public static final String ip = "172.18.9.62";
     public static final int port = 6666;
 
     public static boolean isDrawing = false;
@@ -19,6 +19,36 @@ public class Store {
     public static Socket socket;
 
     public static boolean isComputing = false;
+
+    private static long networkDelay = 0;
+
+    private static Integer sendInterval = 10;
+
+    private static Integer imageQuality = 100;
+
+    public static Integer getSendInterval() {
+        return sendInterval;
+    }
+
+    public static void setSendInterval(Integer sendInterval) {
+        Store.sendInterval = sendInterval;
+    }
+
+    public static Integer getImageQuality() {
+        return imageQuality;
+    }
+
+    public static void setImageQuality(Integer imageQuality) {
+        Store.imageQuality = imageQuality;
+    }
+
+    public static long getNetworkDelay() {
+        return networkDelay;
+    }
+
+    public static void setNetworkDelay(long networkDelay) {
+        Store.networkDelay = networkDelay;
+    }
 
     public static boolean isWhetherAuto() {
         return whetherAuto;

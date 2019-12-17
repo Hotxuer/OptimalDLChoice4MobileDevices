@@ -26,6 +26,7 @@ import android.graphics.Paint.Style;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.media.ImageReader.OnImageAvailableListener;
+import android.os.Bundle;
 import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
@@ -46,6 +47,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Vector;
 import org.tensorflow.demo.Store;
 import org.tensorflow.demo.OverlayView.DrawCallback;
@@ -64,6 +67,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
+
+import android.os.Handler;
 
 /**
  * An activity that uses a TensorFlowMultiBoxDetector and ObjectTracker to detect and then track
@@ -141,6 +146,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private BorderedText borderedText;
 
+  private Timer timer = new Timer();
+  private Handler handler;
+  private long start;
+  private long end;
+
 //  private Socket socket;
   // 获取图片的大小和旋转角度？进行一些初始化的东西
   // frame是原始版本，crop是削减版本？使用frameToCrop矩阵可以进行转换，crop版本的尺寸是预设好的
@@ -215,6 +225,13 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       modeText = (TextView) findViewById(R.id.mode_text);
       switchWayButton = (Button) findViewById(R.id.switch_way_button);
       wayText = (TextView) findViewById(R.id.way_text);
+      netWorkDelay = (TextView)findViewById(R.id.network_delay);
+      intervalMinusButton = (Button)findViewById(R.id.interval_minus);
+      intervalPlusButton = (Button)findViewById(R.id.interval_plus);
+      qualityMinusButton = (Button)findViewById(R.id.quality_minus);
+      qualityPlusButton = (Button)findViewById(R.id.quality_plus);
+      intervalText = (TextView)findViewById(R.id.interval_text);
+      qualityText = (TextView)findViewById(R.id.quality_text);
 
       switchModeButton.setOnClickListener(new View.OnClickListener() {
         @Override
@@ -226,7 +243,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 modeText.setText("当前检测模式：远程");
             }
         }
-    });
+      });
 
       switchWayButton.setOnClickListener(new View.OnClickListener() {
           @Override
@@ -239,6 +256,73 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               }
           }
       });
+
+      intervalPlusButton.setOnClickListener(new View.OnClickListener() {
+          @Override
+          public void onClick(View view) {
+              if (Store.getSendInterval() < 100) {
+                  Store.setSendInterval(Store.getSendInterval() + 1);
+                  intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+              }
+          }
+      });
+
+      intervalMinusButton.setOnClickListener(new View.OnClickListener() {
+          @Override
+          public void onClick(View view) {
+              if (Store.getSendInterval() > 1) {
+                  Store.setSendInterval(Store.getSendInterval() - 1);
+                  intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+              }
+          }
+      });
+
+      qualityPlusButton.setOnClickListener(new View.OnClickListener() {
+          @Override
+          public void onClick(View view) {
+              if (Store.getImageQuality() < 100) {
+                  Store.setImageQuality(Store.getImageQuality() + 1);
+                  qualityText.setText("图片质量:"+Store.getImageQuality());
+              }
+          }
+      });
+
+      qualityMinusButton.setOnClickListener(new View.OnClickListener() {
+          @Override
+          public void onClick(View view) {
+              if (Store.getImageQuality() > 1) {
+                  Store.setImageQuality(Store.getImageQuality() - 1);
+                  qualityText.setText("图片质量:"+Store.getImageQuality());
+              }
+          }
+      });
+
+
+//      TimerTask task = new TimerTask() {
+//          public void run() {
+//              System.out.println("定时器工作");
+//              runOnUiThread(new Runnable() {
+//                  @Override
+//                  public void run() {
+//                      netWorkDelay.setText("网络延迟:"+Store.getNetworkDelay()+"ms");
+//                  }
+//              });
+//          }
+//      };
+//      timer.schedule(task, 1000, 1000);
+
+      handler = new Handler() {
+          @Override
+          public void handleMessage(Message msg) {
+              super.handleMessage(msg);
+              if (msg.what == 1) {
+                  //设置UI
+                  netWorkDelay.setText("延迟:"+Store.getNetworkDelay()+"ms");
+              } else if (msg.what ==0) {
+                  Toast.makeText(getApplicationContext(),"请求资源不成功",Toast.LENGTH_LONG).show();
+              }
+          }
+      };
 
     trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
     trackingOverlay.addCallback(
@@ -301,6 +385,14 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
   Button switchWayButton;
   TextView modeText;
   TextView wayText;
+  TextView netWorkDelay;
+  Button intervalMinusButton;
+  Button intervalPlusButton;
+  Button qualityMinusButton;
+  Button qualityPlusButton;
+  TextView intervalText;
+  TextView qualityText;
+
 
   // 对每张图片的操作，getLuminance获得图片的bytes[],getRgbBytes()获得rgb的bitmap
   @Override
@@ -310,6 +402,13 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     }
     LOGGER.i("开始processImage");
     ++timestamp;
+    if (timestamp == 100) {
+        start = System.currentTimeMillis();
+    }
+    if (timestamp == 600) {
+        end = System.currentTimeMillis();
+        LOGGER.i("500帧耗时"+(end-start)+"ms,每秒"+((500000f/(end-start))));
+    }
     final long currTimestamp = timestamp;
     final byte[] originalLuminance = getLuminance();
     tracker.onFrame(
@@ -405,7 +504,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 });
     } else {
         LOGGER.i("进入远程模式");
-        if (currTimestamp % 10 ==0) {
+        if (currTimestamp % (Store.getSendInterval()) ==0) {
             LOGGER.i("帧满足条件，当前帧数："+currTimestamp);
             Store.setIsComputing(true);
 
@@ -414,63 +513,70 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                     try {
                         // 传送图片
                         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(rgbFrameBitmap.getByteCount());
-                        rgbFrameBitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
+                        rgbFrameBitmap.compress(Bitmap.CompressFormat.PNG, Store.getImageQuality(), outputStream);
 
                         LOGGER.i("开始新线程发送socket");
-                        Thread.sleep(3000);
 
-//                                  Socket socket = new Socket(Store.ip, Store.port);
-//                                  DataOutputStream socketOutputStream = new DataOutputStream(socket.getOutputStream());
-//                                  DataInputStream socketInputStream = new DataInputStream(socket.getInputStream());
-//
-//                                  int size = outputStream.toByteArray().length;
-//                                  String sizeStr = String.valueOf(size);
-////                          String sizeStrr = new String(sizeStr.getBytes(), "UTF-8");
-//                                  socketOutputStream.write(sizeStr.getBytes("UTF-8"));
-//                                  LOGGER.i("pppppppp"+outputStream.size());
-//                                  LOGGER.i("pppppppp"+sizeStr);
-//                                  LOGGER.i("pppppppp"+sizeStr.getBytes("UTF-8"));
-//                                  LOGGER.i("pppppppp"+sizeStr.getBytes().length);
-//
-//                                  socketOutputStream.write(outputStream.toByteArray());
-//                                  socketOutputStream.flush();
-//
-////                          byte[] greets = new byte[1024];
-//                                  byte[] response = new byte[4096];
-////                          socketInputStream.read(greets);
-//                                  socketInputStream.read(response);
-////                          String greeting = new String(greets);
-//                                  String resultStr = new String(response);
-//                                  String[] results = resultStr.trim().split(",");
-//                                  socket.close();
-//
-//                                  LOGGER.i("socket收回的结果为"+resultStr);
-//
-//                                  Integer resultNum = Integer.valueOf(results[0]);
-//
-//                                  List<TrackedRecognition> trackedRecognitions = new LinkedList<TrackedRecognition>();
-//
-//                                  int i = 0;
-//                                  for (; i < resultNum; i++) {
-//                                      Float left = Float.valueOf(results[i * 6 + 1]);
-//                                      Float top = Float.valueOf(results[i * 6 + 2]);
-//                                      Float right = Float.valueOf(results[i * 6 + 3]);
-//                                      Float bottom = Float.valueOf(results[i * 6 + 4]);
-//                                      Float confidence = Float.valueOf(results[i * 6 + 5]);
-//                                      String label = results[i * 6 + 6];
-//                                      LOGGER.i("新增一个框为"+left+" "+top+" "+right+" "+bottom+" "+confidence+" "+label);
-//                                      RectF rectF = new RectF(left, top, right, bottom);
-//                                      final TrackedRecognition trackedRecognition = new TrackedRecognition();
-//                                      trackedRecognition.location = rectF;
-//                                      trackedRecognition.detectionConfidence = confidence;
-//                                      int index=(int)(Math.random()*tracker.COLORS.length);
-//                                      trackedRecognition.color = tracker.COLORS[index];
-//                                      trackedRecognition.title = label;
-//                                      trackedRecognitions.add(trackedRecognition);
-//                                  }
-//                                  if (!Store.isDrawing) {
-//                                      tracker.setTrackedObjects(trackedRecognitions);
-//                                  }
+                          final long startTime = System.currentTimeMillis();
+                          Socket socket = new Socket(Store.ip, Store.port);
+                          DataOutputStream socketOutputStream = new DataOutputStream(socket.getOutputStream());
+                          DataInputStream socketInputStream = new DataInputStream(socket.getInputStream());
+
+                          int size = outputStream.toByteArray().length;
+                          String sizeStr = String.valueOf(size);
+    //                          String sizeStrr = new String(sizeStr.getBytes(), "UTF-8");
+                          socketOutputStream.write(sizeStr.getBytes("UTF-8"));
+                          LOGGER.i("pppppppp"+outputStream.size());
+                          LOGGER.i("pppppppp"+sizeStr);
+                          LOGGER.i("pppppppp"+sizeStr.getBytes("UTF-8"));
+                          LOGGER.i("pppppppp"+sizeStr.getBytes().length);
+
+                          socketOutputStream.write(outputStream.toByteArray());
+                          socketOutputStream.flush();
+
+    //                          byte[] greets = new byte[1024];
+                          byte[] response = new byte[4096];
+    //                          socketInputStream.read(greets);
+                          socketInputStream.read(response);
+    //                          String greeting = new String(greets);
+                          String resultStr = new String(response);
+                          String[] results = resultStr.trim().split(",");
+                          socket.close();
+                          final long endTime = System.currentTimeMillis();
+
+
+                          LOGGER.i("socket收回的结果为"+resultStr+", 耗时:"+(endTime-startTime)+"ms");
+                          Store.setNetworkDelay(endTime-startTime);
+                          Message msg = new Message();
+                          msg.what = 1;
+                          handler.sendMessage(msg);
+
+
+                          Integer resultNum = Integer.valueOf(results[0]);
+
+                          List<TrackedRecognition> trackedRecognitions = new LinkedList<TrackedRecognition>();
+
+                          int i = 0;
+                          for (; i < resultNum; i++) {
+                              Float left = Float.valueOf(results[i * 6 + 1]);
+                              Float top = Float.valueOf(results[i * 6 + 2]);
+                              Float right = Float.valueOf(results[i * 6 + 3]);
+                              Float bottom = Float.valueOf(results[i * 6 + 4]);
+                              Float confidence = Float.valueOf(results[i * 6 + 5]);
+                              String label = results[i * 6 + 6];
+                              LOGGER.i("新增一个框为"+left+" "+top+" "+right+" "+bottom+" "+confidence+" "+label);
+                              RectF rectF = new RectF(left, top, right, bottom);
+                              final TrackedRecognition trackedRecognition = new TrackedRecognition();
+                              trackedRecognition.location = rectF;
+                              trackedRecognition.detectionConfidence = confidence;
+                              int index=(int)(Math.random()*tracker.COLORS.length);
+                              trackedRecognition.color = tracker.COLORS[index];
+                              trackedRecognition.title = label;
+                              trackedRecognitions.add(trackedRecognition);
+                          }
+                          if (!Store.isDrawing) {
+                              tracker.setTrackedObjects(trackedRecognitions);
+                          }
                         LOGGER.i("socket线程即将结束，当前帧数为"+currTimestamp);
 
                         trackingOverlay.postInvalidate();
