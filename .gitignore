@@ -11,6 +11,7 @@
 .idea/runConfigurations.xml
 .idea/tasks.xml
 .idea/workspace.xml
+.idea/vcs.xml
 .gradle
 local.properties
 .DS_Store
