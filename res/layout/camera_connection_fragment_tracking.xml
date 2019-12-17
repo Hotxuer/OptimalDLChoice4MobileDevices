@@ -144,7 +144,7 @@
                                   android:layout_height="wrap_content"
                                   android:textSize="20dp"
                                   android:textColor="#FFFFFF"
-                                  android:text="图片质量:100"/>
+                                  android:text="图片质量:50"/>
 
                               <Button
                                   android:id="@+id/quality_plus"

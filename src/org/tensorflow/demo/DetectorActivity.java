@@ -281,7 +281,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           @Override
           public void onClick(View view) {
               if (Store.getImageQuality() < 100) {
-                  Store.setImageQuality(Store.getImageQuality() + 1);
+                  Store.setImageQuality(Store.getImageQuality() + 10);
                   qualityText.setText("图片质量:"+Store.getImageQuality());
               }
           }
@@ -291,7 +291,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
           @Override
           public void onClick(View view) {
               if (Store.getImageQuality() > 1) {
-                  Store.setImageQuality(Store.getImageQuality() - 1);
+                  Store.setImageQuality(Store.getImageQuality() - 10);
                   qualityText.setText("图片质量:"+Store.getImageQuality());
               }
           }
@@ -512,8 +512,8 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                 public void run() {
                     try {
                         // 传送图片
-                        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(rgbFrameBitmap.getByteCount());
-                        rgbFrameBitmap.compress(Bitmap.CompressFormat.PNG, Store.getImageQuality(), outputStream);
+                        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                        rgbFrameBitmap.compress(Bitmap.CompressFormat.JPEG, Store.getImageQuality(), outputStream);
 
                         LOGGER.i("开始新线程发送socket");
 
@@ -525,7 +525,11 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                           int size = outputStream.toByteArray().length;
                           String sizeStr = String.valueOf(size);
     //                          String sizeStrr = new String(sizeStr.getBytes(), "UTF-8");
+                          String sizeeStr = String.valueOf(sizeStr.getBytes().length);
+                          socketOutputStream.write(sizeeStr.getBytes("UTF-8"));
+                          socketOutputStream.flush();
                           socketOutputStream.write(sizeStr.getBytes("UTF-8"));
+                          socketOutputStream.flush();
                           LOGGER.i("pppppppp"+outputStream.size());
                           LOGGER.i("pppppppp"+sizeStr);
                           LOGGER.i("pppppppp"+sizeStr.getBytes("UTF-8"));

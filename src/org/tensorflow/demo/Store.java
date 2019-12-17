@@ -24,7 +24,7 @@ public class Store {
 
     private static Integer sendInterval = 10;
 
-    private static Integer imageQuality = 100;
+    private static Integer imageQuality = 50;
 
     public static Integer getSendInterval() {
         return sendInterval;
