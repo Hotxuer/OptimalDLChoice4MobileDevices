@@ -148,8 +148,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
   private Timer timer = new Timer();
   private Handler handler;
-  private long start;
-  private long end;
 
 //  private Socket socket;
   // 获取图片的大小和旋转角度？进行一些初始化的东西
@@ -248,9 +246,25 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       switchWayButton.setOnClickListener(new View.OnClickListener() {
           @Override
           public void onClick(View v) {
-              Store.setWhetherAuto(!Store.isWhetherLocal());
+              Store.setWhetherAuto(!Store.isWhetherAuto());
               if (Store.isWhetherAuto()) {
                   wayText.setText("当前切换方式：自动");
+
+                  // 变成自动后把模式变为远程
+                  Store.setWhetherLocal(false);
+                  modeText.setText("当前检测模式：远程");
+
+                  // 一段时间之后检查网络延迟，如果太大切换为本地模式
+                  new Handler().postDelayed(new Runnable(){
+                      public void run() {
+                          if (Store.getNetworkDelay() > Store.getDelayThreshold()) {
+                              // 切换为本地模式
+                              Store.setWhetherLocal(true);
+                              modeText.setText("当前检测模式：本地");
+                              Toast.makeText(getApplicationContext(), "延迟过大，自动切换为本地模式", Toast.LENGTH_LONG).show();
+                          }
+                      }
+                  }, 3000);
               } else {
                   wayText.setText("当前切换方式：手动");
               }
@@ -296,20 +310,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               }
           }
       });
-
-
-//      TimerTask task = new TimerTask() {
-//          public void run() {
-//              System.out.println("定时器工作");
-//              runOnUiThread(new Runnable() {
-//                  @Override
-//                  public void run() {
-//                      netWorkDelay.setText("网络延迟:"+Store.getNetworkDelay()+"ms");
-//                  }
-//              });
-//          }
-//      };
-//      timer.schedule(task, 1000, 1000);
 
       handler = new Handler() {
           @Override
@@ -402,13 +402,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     }
     LOGGER.i("开始processImage");
     ++timestamp;
-    if (timestamp == 100) {
-        start = System.currentTimeMillis();
-    }
-    if (timestamp == 600) {
-        end = System.currentTimeMillis();
-        LOGGER.i("500帧耗时"+(end-start)+"ms,每秒"+((500000f/(end-start))));
-    }
     final long currTimestamp = timestamp;
     final byte[] originalLuminance = getLuminance();
     tracker.onFrame(

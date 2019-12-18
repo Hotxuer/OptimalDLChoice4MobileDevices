@@ -7,8 +7,8 @@ import retrofit2.Retrofit;
 public class Store {
     private static boolean whetherLocal = true;
     private static boolean whetherAuto = false;
+
     private static Retrofit retrofit;
-//    public static final String serverUrl = "http://172.18.2.18:8000/";
     public static final String serverUrl = "http://172.18.2.13:8000/";
 
     public static final String ip = "172.18.9.62";
@@ -25,6 +25,10 @@ public class Store {
     private static Integer sendInterval = 10;
 
     private static Integer imageQuality = 50;
+
+    private static Integer delayThreshold = 1000;
+
+
 
     public static Integer getSendInterval() {
         return sendInterval;
@@ -88,5 +92,13 @@ public class Store {
 
     public static void setRetrofit(Retrofit retrofit) {
         Store.retrofit = retrofit;
+    }
+
+    public static Integer getDelayThreshold() {
+        return delayThreshold;
+    }
+
+    public static void setDelayThreshold(Integer delayThreshold) {
+        Store.delayThreshold = delayThreshold;
     }
 }
