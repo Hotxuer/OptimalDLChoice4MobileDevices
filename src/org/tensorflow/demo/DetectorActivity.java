@@ -219,6 +219,34 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
     cropToFrameTransform = new Matrix();
     frameToCropTransform.invert(cropToFrameTransform);
 
+      handler = new Handler() {
+          @Override
+          public void handleMessage(Message msg) {
+              super.handleMessage(msg);
+              switch (msg.what) {
+                  case 0:
+                      Toast.makeText(getApplicationContext(),"请求资源不成功",Toast.LENGTH_LONG).show();
+                      break;
+                  case 1:
+                      netWorkDelay.setText("延迟:"+Store.getNetworkDelay()+"ms");
+                      break;
+                  case 2:
+                      Toast.makeText(getApplicationContext(), "网络状况良好，自动切换为远程模式", Toast.LENGTH_LONG).show();
+                      modeText.setText("当前检测模式：远程");
+                      break;
+                  case 3:
+                      Toast.makeText(getApplicationContext(), "网络状况较差，自动切换为本地模式", Toast.LENGTH_LONG).show();
+                      modeText.setText("当前检测模式：本地");
+                      break;
+                  case 4:
+                      intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+                      qualityText.setText("图片质量:"+Store.getImageQuality());
+                      Toast.makeText(getApplicationContext(), "已根据网络状况调整至最佳发送参数", Toast.LENGTH_SHORT).show();
+
+              }
+          }
+      };
+
       switchModeButton = (Button) findViewById(R.id.switch_mode_button);
       modeText = (TextView) findViewById(R.id.mode_text);
       switchWayButton = (Button) findViewById(R.id.switch_way_button);
@@ -234,11 +262,15 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       switchModeButton.setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            Store.setWhetherLocal(!Store.isWhetherLocal());
-            if (Store.isWhetherLocal()) {
-                modeText.setText("当前检测模式：本地");
+            if (Store.isWhetherAuto()) {
+                Toast.makeText(getApplicationContext(), "自动模式下不可调节", Toast.LENGTH_SHORT).show();
             } else {
-                modeText.setText("当前检测模式：远程");
+                Store.setWhetherLocal(!Store.isWhetherLocal());
+                if (Store.isWhetherLocal()) {
+                    modeText.setText("当前检测模式：本地");
+                } else {
+                    modeText.setText("当前检测模式：远程");
+                }
             }
         }
       });
@@ -249,24 +281,47 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
               Store.setWhetherAuto(!Store.isWhetherAuto());
               if (Store.isWhetherAuto()) {
                   wayText.setText("当前切换方式：自动");
+                  Store.setSendInterval(15);
+                  Store.setImageQuality(10);
+                  intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+                  qualityText.setText("图片质量:"+Store.getImageQuality());
 
                   // 变成自动后把模式变为远程
                   Store.setWhetherLocal(false);
                   modeText.setText("当前检测模式：远程");
 
-                  // 一段时间之后检查网络延迟，如果太大切换为本地模式
-                  new Handler().postDelayed(new Runnable(){
+                  timer.schedule(new TimerTask() {
+                      @Override
                       public void run() {
-                          if (Store.getNetworkDelay() > Store.getDelayThreshold()) {
-                              // 切换为本地模式
+                          // 检查网络延迟，自动改变当前模式
+                          if (Store.isWhetherLocal() && Store.getNetworkDelay() < Store.getDelayThreshold()) {
+                              Store.setWhetherLocal(false);
+                              Message msg = Message.obtain();
+                              msg.what = 2;
+                              handler.sendMessage(msg);
+                          } else if (!Store.isWhetherLocal() && Store.getNetworkDelay() > Store.getDelayThreshold()){
                               Store.setWhetherLocal(true);
-                              modeText.setText("当前检测模式：本地");
-                              Toast.makeText(getApplicationContext(), "延迟过大，自动切换为本地模式", Toast.LENGTH_LONG).show();
+                              Message msg = Message.obtain();
+                              msg.what = 3;
+                              handler.sendMessage(msg);
                           }
                       }
-                  }, 3000);
+                  },6000,6000);
+
+                  // 几秒后更新最佳参数
+                  new Handler().postDelayed(new Runnable() {
+                      @Override
+                      public void run() {
+                          Store.setSendInterval(10);
+                          Store.setImageQuality(50);
+                          Message msg = Message.obtain();
+                          msg.what = 4;
+                          handler.sendMessage(msg);
+                      }
+                  }, 4000);
               } else {
                   wayText.setText("当前切换方式：手动");
+                  timer.cancel();
               }
           }
       });
@@ -274,9 +329,13 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       intervalPlusButton.setOnClickListener(new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-              if (Store.getSendInterval() < 100) {
-                  Store.setSendInterval(Store.getSendInterval() + 1);
-                  intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+              if (Store.isWhetherAuto()) {
+                  Toast.makeText(getApplicationContext(), "自动模式下不可调节", Toast.LENGTH_SHORT).show();
+              } else {
+                  if (Store.getSendInterval() < 100) {
+                      Store.setSendInterval(Store.getSendInterval() + 1);
+                      intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+                  }
               }
           }
       });
@@ -284,9 +343,13 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       intervalMinusButton.setOnClickListener(new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-              if (Store.getSendInterval() > 1) {
-                  Store.setSendInterval(Store.getSendInterval() - 1);
-                  intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+              if (Store.isWhetherAuto()) {
+                  Toast.makeText(getApplicationContext(), "自动模式下不可调节", Toast.LENGTH_SHORT).show();
+              } else {
+                  if (Store.getSendInterval() > 1) {
+                      Store.setSendInterval(Store.getSendInterval() - 1);
+                      intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
+                  }
               }
           }
       });
@@ -294,9 +357,13 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       qualityPlusButton.setOnClickListener(new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-              if (Store.getImageQuality() < 100) {
-                  Store.setImageQuality(Store.getImageQuality() + 10);
-                  qualityText.setText("图片质量:"+Store.getImageQuality());
+              if (Store.isWhetherAuto()) {
+                  Toast.makeText(getApplicationContext(), "自动模式下不可调节", Toast.LENGTH_SHORT).show();
+              } else {
+                  if (Store.getImageQuality() < 100) {
+                      Store.setImageQuality(Store.getImageQuality() + 10);
+                      qualityText.setText("图片质量:"+Store.getImageQuality());
+                  }
               }
           }
       });
@@ -304,25 +371,16 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
       qualityMinusButton.setOnClickListener(new View.OnClickListener() {
           @Override
           public void onClick(View view) {
-              if (Store.getImageQuality() > 1) {
-                  Store.setImageQuality(Store.getImageQuality() - 10);
-                  qualityText.setText("图片质量:"+Store.getImageQuality());
+              if (Store.isWhetherAuto()) {
+                  Toast.makeText(getApplicationContext(), "自动模式下不可调节", Toast.LENGTH_SHORT).show();
+              } else {
+                  if (Store.getImageQuality() > 1) {
+                      Store.setImageQuality(Store.getImageQuality() - 10);
+                      qualityText.setText("图片质量:"+Store.getImageQuality());
+                  }
               }
           }
       });
-
-      handler = new Handler() {
-          @Override
-          public void handleMessage(Message msg) {
-              super.handleMessage(msg);
-              if (msg.what == 1) {
-                  //设置UI
-                  netWorkDelay.setText("延迟:"+Store.getNetworkDelay()+"ms");
-              } else if (msg.what ==0) {
-                  Toast.makeText(getApplicationContext(),"请求资源不成功",Toast.LENGTH_LONG).show();
-              }
-          }
-      };
 
     trackingOverlay = (OverlayView) findViewById(R.id.tracking_overlay);
     trackingOverlay.addCallback(
@@ -544,7 +602,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
 
                           LOGGER.i("socket收回的结果为"+resultStr+", 耗时:"+(endTime-startTime)+"ms");
                           Store.setNetworkDelay(endTime-startTime);
-                          Message msg = new Message();
+                          Message msg = Message.obtain();
                           msg.what = 1;
                           handler.sendMessage(msg);
 
