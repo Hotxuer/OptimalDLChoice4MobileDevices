@@ -290,6 +290,7 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                   Store.setWhetherLocal(false);
                   modeText.setText("当前检测模式：远程");
 
+                  timer = new Timer();
                   timer.schedule(new TimerTask() {
                       @Override
                       public void run() {
