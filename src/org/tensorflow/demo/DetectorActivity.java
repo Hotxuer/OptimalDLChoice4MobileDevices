@@ -242,7 +242,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                       intervalText.setText("发送间隔:"+Store.getSendInterval()+"帧");
                       qualityText.setText("图片质量:"+Store.getImageQuality());
                       Toast.makeText(getApplicationContext(), "已根据网络状况调整至最佳发送参数", Toast.LENGTH_SHORT).show();
-
               }
           }
       };
@@ -305,6 +304,51 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                               Message msg = Message.obtain();
                               msg.what = 3;
                               handler.sendMessage(msg);
+                          } else if (Store.isWhetherLocal() && Store.getNetworkDelay() > Store.getDelayThreshold()) {
+                              // 如果是本地而且上一次存储的延迟较大，需要重新发送，再测延迟
+                              new Thread() {
+                                  public void run() {
+                                      try {
+                                          // 传送图片
+                                          final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                                          rgbFrameBitmap.compress(Bitmap.CompressFormat.JPEG, Store.getImageQuality(), outputStream);
+
+                                          LOGGER.i("开始新线程发送socket");
+
+                                          final long startTime = System.currentTimeMillis();
+                                          Socket socket = new Socket(Store.ip, Store.port);
+                                          DataOutputStream socketOutputStream = new DataOutputStream(socket.getOutputStream());
+                                          DataInputStream socketInputStream = new DataInputStream(socket.getInputStream());
+
+                                          int size = outputStream.toByteArray().length;
+                                          String sizeStr = String.valueOf(size);
+                                          String sizeeStr = String.valueOf(sizeStr.getBytes().length);
+                                          socketOutputStream.write(sizeeStr.getBytes("UTF-8"));
+                                          socketOutputStream.flush();
+                                          socketOutputStream.write(sizeStr.getBytes("UTF-8"));
+                                          socketOutputStream.flush();
+                                          socketOutputStream.write(outputStream.toByteArray());
+                                          socketOutputStream.flush();
+
+                                          byte[] response = new byte[4096];
+                                          socketInputStream.read(response);
+                                          String resultStr = new String(response);
+                                          String[] results = resultStr.trim().split(",");
+                                          socket.close();
+                                          final long endTime = System.currentTimeMillis();
+
+
+                                          LOGGER.i("socket收回的结果为"+resultStr+", 耗时:"+(endTime-startTime)+"ms");
+                                          Store.setNetworkDelay(endTime-startTime);
+                                          Message msg = Message.obtain();
+                                          msg.what = 1;
+                                          handler.sendMessage(msg);
+                                      }
+                                      catch (Exception e) {
+                                          e.printStackTrace();
+                                      }
+                                  };
+                              }.start();
                           }
                       }
                   },6000,6000);
