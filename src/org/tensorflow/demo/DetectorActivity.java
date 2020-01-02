@@ -288,7 +288,6 @@ public class DetectorActivity extends CameraActivity implements OnImageAvailable
                   // 变成自动后把模式变为远程
                   Store.setWhetherLocal(false);
                   modeText.setText("当前检测模式：远程");
-
                   timer = new Timer();
                   timer.schedule(new TimerTask() {
                       @Override
